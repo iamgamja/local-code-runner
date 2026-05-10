@@ -15,8 +15,8 @@
   --disabled-color: #ccc;
   --border-color: #ccc;
   --background-color: #f4f4f9;
-  --monospace-font: "Fusion Pixel 12px Monospaced KR", monospace;
-  --terminal-monospace-font: monospace;
+  --input-monospace-font: "Fusion Pixel 12px Monospaced KR", monospace;
+  --output-monospace-font: monospace;
 }
 
 body {
@@ -91,26 +91,54 @@ header {
 }
 
 main {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
 }
 
-textarea#code {
-  height: 700px;
-  font-family: var(--monospace-font);
+.editor-pane,
+.output-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.editor-pane label,
+.output-pane label {
+  font-weight: bold;
+  font-family: sans-serif;
+}
+
+#in-code,
+#in-stdin,
+#out-stdout,
+#out-stderr {
+  height: 500px;
+  overflow: auto;
   font-size: 16px;
   padding: 10px;
   border: 1px solid var(--border-color);
+  border-radius: 4px;
 }
 
-#terminal {
-  height: 700px;
+#in-code,
+#in-stdin {
+  font-family: var(--input-monospace-font);
+  background: white;
+}
+
+#out-stdout,
+#out-stderr {
+  font-family: var(--output-monospace-font);
+}
+
+#out-stdout {
   background: #1e1e1e;
   color: #d4d4d4;
-  padding: 10px;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  font-family: var(--terminal-monospace-font);
-  font-size: 16px;
+}
+
+#out-stderr {
+  background: #2a1e1e;
+  color: #ff8c8c;
 }

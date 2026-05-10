@@ -67,7 +67,7 @@ io.on("connection", (socket) => {
     socket.emit("process_count", running_process ? 1 : 0);
   }
 
-  socket.on("run_code", (code) => {
+  socket.on("run_code", ({ code, stdin }) => {
     if (running_process) return; // 이미 실행 중인 프로세스가 있으면 무시
 
     // 1. 로컬 백업
@@ -82,18 +82,22 @@ io.on("connection", (socket) => {
     running_process = pythonProcess;
     updateProcessCount();
 
+    if (stdin) {
+      pythonProcess.stdin.write(stdin);
+    }
+    pythonProcess.stdin.end();
+
     pythonProcess.stdout.on("data", (data) => {
-      socket.emit("output", data.toString());
+      socket.emit("stdout", data.toString());
     });
 
     pythonProcess.stderr.on("data", (data) => {
-      // tqdm 등은 stderr를 통해 진행 상황을 보냅니다.
-      socket.emit("output", data.toString());
+      socket.emit("stderr", data.toString());
     });
 
     pythonProcess.on("close", (code) => {
       if (code !== null) {
-        socket.emit("output", `\n[Process exited with code ${code}]\n\n`);
+        socket.emit("stderr", `\n[Process exited with code ${code}]\n\n`);
       }
 
       running_process = null;
@@ -106,7 +110,7 @@ io.on("connection", (socket) => {
       running_process.kill();
       running_process = null;
       updateProcessCount();
-      socket.emit("output", "\n[Process terminated]\n\n");
+      socket.emit("stderr", "\n[Process terminated]\n\n");
     }
   });
 

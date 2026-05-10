@@ -1,28 +1,42 @@
 const socket = io();
-const terminal = document.getElementById("terminal");
-const codeArea = document.getElementById("code");
+const stdout = document.getElementById("out-stdout");
+const stderr = document.getElementById("out-stderr");
+const codeArea = document.getElementById("in-code");
+const stdinArea = document.getElementById("in-stdin");
 const processCount = document.getElementById("process-count");
 const runBtn = document.getElementById("run-btn");
 const killBtn = document.getElementById("kill-btn");
 
 function execute() {
-  terminal.innerText = "[Process started]\n";
-  socket.emit("run_code", codeArea.value);
+  stdout.innerText = "";
+  stderr.innerText = "";
+  socket.emit("run_code", {
+    code: codeArea.value,
+    stdin: stdinArea.value,
+  });
 }
 
 function kill() {
   socket.emit("kill");
 }
 
-socket.on("output", (data) => {
+function appendStream(element, data) {
   if (data.includes("\r")) {
-    const lines = terminal.innerText.split("\n");
+    const lines = element.innerText.split("\n");
     lines[lines.length - 1] = data.replace("\r", "");
-    terminal.innerText = lines.join("\n");
+    element.innerText = lines.join("\n");
   } else {
-    terminal.innerText += data;
+    element.innerText += data;
   }
-  terminal.scrollTop = terminal.scrollHeight;
+  element.scrollTop = element.scrollHeight;
+}
+
+socket.on("stdout", (data) => {
+  appendStream(stdout, data);
+});
+
+socket.on("stderr", (data) => {
+  appendStream(stderr, data);
 });
 
 socket.on("process_count", (count) => {

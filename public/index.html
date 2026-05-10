@@ -7,7 +7,9 @@
   </head>
   <body>
     <header>
-      <h2>Python Code <button id="run-btn" onclick="execute()">Run</button>ner</h2>
+      <h2>
+        Python Code <button id="run-btn" onclick="execute()">Run</button>ner
+      </h2>
       <div id="status">
         <span>실행 중인 프로세스: <strong id="process-count">0</strong></span>
         <button id="kill-btn" onclick="kill()" title="프로세스 종료" disabled>
@@ -17,8 +19,31 @@
     </header>
 
     <main>
-      <textarea id="code" placeholder="파이썬 코드를 입력하세요..."></textarea>
-      <div id="terminal"></div>
+      <section class="editor-pane">
+        <label for="in-code">Code</label>
+        <textarea
+          id="in-code"
+          placeholder="파이썬 코드를 입력하세요..."
+        ></textarea>
+      </section>
+
+      <section class="editor-pane">
+        <label for="in-stdin">stdin</label>
+        <textarea
+          id="in-stdin"
+          placeholder="표준 입력을 여기에 입력하세요..."
+        ></textarea>
+      </section>
+
+      <section class="output-pane">
+        <label for="out-stdout">stdout</label>
+        <textarea id="out-stdout" readonly></textarea>
+      </section>
+
+      <section class="output-pane">
+        <label for="out-stderr">stderr</label>
+        <textarea id="out-stderr" readonly></textarea>
+      </section>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
