@@ -60,7 +60,16 @@ app.use(express.json());
 io.on("connection", (socket) => {
   console.log("Client connected");
 
+  // 각 소켓마다 실행 중인 프로세스 추적
+  let running_process = null;
+
+  function updateProcessCount() {
+    socket.emit("process_count", running_process ? 1 : 0);
+  }
+
   socket.on("run_code", (code) => {
+    if (running_process) return; // 이미 실행 중인 프로세스가 있으면 무시
+
     // 1. 로컬 백업
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     fs.writeFileSync(path.join(BACKUP_DIR, `backup_${timestamp}.py`), code);
@@ -70,6 +79,8 @@ io.on("connection", (socket) => {
 
     // 3. 파이썬 실행 (unbuffered 모드 '-u' 필수: 실시간 출력 보장)
     const pythonProcess = spawn("python", ["-u", SCRIPT_PATH]);
+    running_process = pythonProcess;
+    updateProcessCount();
 
     pythonProcess.stdout.on("data", (data) => {
       socket.emit("output", data.toString());
@@ -81,8 +92,32 @@ io.on("connection", (socket) => {
     });
 
     pythonProcess.on("close", (code) => {
-      socket.emit("output", `\n[Process exited with code ${code}]`);
+      if (code !== null) {
+        socket.emit("output", `\n[Process exited with code ${code}]\n\n`);
+      }
+
+      running_process = null;
+      updateProcessCount();
     });
+  });
+
+  socket.on("kill", () => {
+    if (running_process && !running_process.killed) {
+      running_process.kill();
+      running_process = null;
+      updateProcessCount();
+      socket.emit("output", "\n[Process terminated]\n\n");
+    }
+  });
+
+  socket.on("disconnect", () => {
+    // 연결 끊김 시 프로세스 종료
+    if (running_process && !running_process.killed) {
+      running_process.kill();
+    }
+    running_process = null;
+    updateProcessCount();
+    console.log("Client disconnected");
   });
 });
 

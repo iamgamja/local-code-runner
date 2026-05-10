@@ -6,7 +6,15 @@
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <h2>Python Code <a id="run-code-link" onclick="execute()">Run</a>ner</h2>
+    <header>
+      <h2>Python Code <button id="run-btn" onclick="execute()">Run</button>ner</h2>
+      <div id="status">
+        <span>실행 중인 프로세스: <strong id="process-count">0</strong></span>
+        <button id="kill-btn" onclick="kill()" title="프로세스 종료" disabled>
+          Kill
+        </button>
+      </div>
+    </header>
 
     <main>
       <textarea id="code" placeholder="파이썬 코드를 입력하세요..."></textarea>
