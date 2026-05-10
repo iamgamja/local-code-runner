@@ -8,8 +8,8 @@ const runBtn = document.getElementById("run-btn");
 const killBtn = document.getElementById("kill-btn");
 
 function execute() {
-  stdout.innerText = "";
-  stderr.innerText = "";
+  stdout.value = "";
+  stderr.value = "";
   socket.emit("run_code", {
     code: codeArea.value,
     stdin: stdinArea.value,
@@ -20,14 +20,21 @@ function kill() {
   socket.emit("kill");
 }
 
+const MAX_OUTPUT_LENGTH = 3_000;
+
 function appendStream(element, data) {
   if (data.includes("\r")) {
-    const lines = element.innerText.split("\n");
+    const lines = element.value.split("\n");
     lines[lines.length - 1] = data.replace("\r", "");
-    element.innerText = lines.join("\n");
+    element.value = lines.join("\n");
   } else {
-    element.innerText += data;
+    element.value += data;
   }
+
+  if (element.value.length > MAX_OUTPUT_LENGTH) {
+    element.value = "[...]\n" + element.value.slice(-MAX_OUTPUT_LENGTH);
+  }
+
   element.scrollTop = element.scrollHeight;
 }
 
