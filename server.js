@@ -57,6 +57,8 @@ async function installPythonDependencies() {
 app.use(express.static("public"));
 app.use(express.json());
 
+const MAX_BUFFER_LENGTH = 3_000;
+
 io.on("connection", (socket) => {
   console.log("Client connected");
 
@@ -87,15 +89,41 @@ io.on("connection", (socket) => {
     }
     pythonProcess.stdin.end();
 
+    let stdoutBuffer = "";
     pythonProcess.stdout.on("data", (data) => {
-      socket.emit("stdout", data.toString());
+      stdoutBuffer += data.toString();
+      stdoutBuffer = stdoutBuffer.slice(-MAX_BUFFER_LENGTH);
     });
+    const flushStdoutInterval = setInterval(() => {
+      if (stdoutBuffer) {
+        socket.emit("stdout", stdoutBuffer);
+        stdoutBuffer = "";
+      }
+    }, 100);
 
+    let stderrBuffer = "";
     pythonProcess.stderr.on("data", (data) => {
-      socket.emit("stderr", data.toString());
+      stderrBuffer += data.toString();
+      stderrBuffer = stderrBuffer.slice(-MAX_BUFFER_LENGTH);
     });
+    const flushStderrInterval = setInterval(() => {
+      if (stderrBuffer) {
+        socket.emit("stderr", stderrBuffer);
+        stderrBuffer = "";
+      }
+    }, 100);
 
     pythonProcess.on("close", (code) => {
+      if (stdoutBuffer) {
+        socket.emit("stdout", stdoutBuffer);
+        stdoutBuffer = "";
+      }
+      if (stderrBuffer) {
+        socket.emit("stderr", stderrBuffer);
+        stderrBuffer = "";
+      }
+      clearInterval(flushStdoutInterval);
+      clearInterval(flushStderrInterval);
       if (code !== null) {
         socket.emit("stderr", `\n[Process exited with code ${code}]\n\n`);
       }
@@ -108,8 +136,6 @@ io.on("connection", (socket) => {
   socket.on("kill", () => {
     if (running_process && !running_process.killed) {
       running_process.kill();
-      running_process = null;
-      updateProcessCount();
       socket.emit("stderr", "\n[Process terminated]\n\n");
     }
   });
