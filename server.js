@@ -114,6 +114,8 @@ io.on("connection", (socket) => {
     }, 100);
 
     pythonProcess.on("close", (code) => {
+      clearInterval(flushStdoutInterval);
+      clearInterval(flushStderrInterval);
       if (stdoutBuffer) {
         socket.emit("stdout", stdoutBuffer);
         stdoutBuffer = "";
@@ -122,8 +124,6 @@ io.on("connection", (socket) => {
         socket.emit("stderr", stderrBuffer);
         stderrBuffer = "";
       }
-      clearInterval(flushStdoutInterval);
-      clearInterval(flushStderrInterval);
       if (code !== null) {
         socket.emit("stderr", `\n[Process exited with code ${code}]\n\n`);
       }
@@ -141,12 +141,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    // 연결 끊김 시 프로세스 종료
     if (running_process && !running_process.killed) {
       running_process.kill();
     }
-    running_process = null;
-    updateProcessCount();
     console.log("Client disconnected");
   });
 });
