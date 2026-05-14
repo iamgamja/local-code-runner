@@ -39,7 +39,7 @@ async function detectPythonExecutable() {
             pythonExecutable = "python3";
             console.log("Python3 감지됨. Python3를 사용합니다.");
           } else {
-            console.warn("Python 실행 파일을 �을 수 없습니다.");
+            console.warn("Python 실행 파일을 찾을 수 없습니다.");
           }
           resolve();
         });
