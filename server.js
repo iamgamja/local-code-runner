@@ -18,6 +18,36 @@ if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR);
 if (!fs.existsSync(path.dirname(SCRIPT_PATH)))
   fs.mkdirSync(path.dirname(SCRIPT_PATH));
 
+let pythonExecutable = "python3";
+
+async function detectPythonExecutable() {
+  return new Promise((resolve) => {
+    // pypy3 확인
+    const pypy3Process = spawn("pypy3", ["--version"]);
+    
+    let pypy3Available = false;
+    pypy3Process.on("close", (code) => {
+      if (code === 0) {
+        pythonExecutable = "pypy3";
+        console.log("PyPy3 감지됨. PyPy3를 사용합니다.");
+        resolve();
+      } else {
+        // python3 확인
+        const python3Process = spawn("python3", ["--version"]);
+        python3Process.on("close", (code) => {
+          if (code === 0) {
+            pythonExecutable = "python3";
+            console.log("Python3 감지됨. Python3를 사용합니다.");
+          } else {
+            console.warn("Python 실행 파일을 �을 수 없습니다.");
+          }
+          resolve();
+        });
+      }
+    });
+  });
+}
+
 async function installPythonDependencies() {
   if (!fs.existsSync(REQUIREMENTS_PATH)) {
     console.log("requirements.txt가 없습니다. Python 모듈 설치를 건너뜁니다.");
@@ -27,7 +57,7 @@ async function installPythonDependencies() {
   console.log("Python 종속성을 확인 중입니다...");
 
   await new Promise((resolve) => {
-    const pipProcess = spawn("python", [
+    const pipProcess = spawn(pythonExecutable, [
       "-m",
       "pip",
       "install",
@@ -80,7 +110,7 @@ io.on("connection", (socket) => {
     fs.writeFileSync(SCRIPT_PATH, code);
 
     // 3. 파이썬 실행 (unbuffered 모드 '-u' 필수: 실시간 출력 보장)
-    const pythonProcess = spawn("python", ["-u", SCRIPT_PATH]);
+    const pythonProcess = spawn(pythonExecutable, ["-u", SCRIPT_PATH]);
     running_process = pythonProcess;
     updateProcessCount();
 
@@ -150,6 +180,7 @@ io.on("connection", (socket) => {
 
 const PORT = 3000;
 (async () => {
+  await detectPythonExecutable();
   await installPythonDependencies();
 
   server.listen(PORT, () => {
