@@ -62,16 +62,25 @@ function run_code({ code, stdin }) {
 
   running_process = pythonProcess;
   updateProcessCount();
+  io.emit("set_stderr_status", "running");
   stdoutHistory = "";
   stderrHistory = "";
 
   pythonProcess.stdout.on("data", (data) => {
     stdoutHistory += data.toString();
     stdoutHistory = stdoutHistory.slice(-MAX_BUFFER_LENGTH);
+    stdoutHistory = stdoutHistory.split('\n').map(line => {
+      const lastCRIndex = line.lastIndexOf('\r');
+      return lastCRIndex !== -1 ? line.substring(lastCRIndex + 1) : line;
+    }).join('\n');
   });
   pythonProcess.stderr.on("data", (data) => {
     stderrHistory += data.toString();
     stderrHistory = stderrHistory.slice(-MAX_BUFFER_LENGTH);
+    stderrHistory = stderrHistory.split('\n').map(line => {
+      const lastCRIndex = line.lastIndexOf('\r');
+      return lastCRIndex !== -1 ? line.substring(lastCRIndex + 1) : line;
+    }).join('\n');
   });
 
   const sendInterval = setInterval(() => {
@@ -94,7 +103,7 @@ function run_code({ code, stdin }) {
       stderrHistory = "";
     }
     if (code !== null) {
-      io.emit("stderr", `\n[Process exited with code ${code}]\n\n`);
+      io.emit("set_stderr_status", `code: ${code}`);
     }
 
     running_process = null;
@@ -112,6 +121,7 @@ io.on("connection", (socket) => {
   if (fs.existsSync(STDIN_PATH)) {
     socket.emit("set_stdin", fs.readFileSync(STDIN_PATH, "utf-8"));
   }
+  socket.emit("set_stderr_status", running_process ? "running" : "");
 
   socket.on("run_code", ({ code, stdin }) => {
     if (running_process) return;
@@ -122,7 +132,7 @@ io.on("connection", (socket) => {
   socket.on("kill", () => {
     if (running_process && !running_process.killed) {
       running_process.kill();
-      io.emit("stderr", "\n[Process terminated]\n\n");
+      io.emit("set_stderr_status", "terminated");
     }
   });
 

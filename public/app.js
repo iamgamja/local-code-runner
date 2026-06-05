@@ -6,6 +6,7 @@ const stdinArea = document.getElementById("in-stdin");
 const processCount = document.getElementById("process-count");
 const runBtn = document.getElementById("run-btn");
 const killBtn = document.getElementById("kill-btn");
+const stderrStatus = document.getElementById("stderr-status");
 
 function execute() {
   stdout.value = "";
@@ -20,17 +21,6 @@ function kill() {
   socket.emit("kill");
 }
 
-function appendStream(element, content) {
-  const lines = content.split('\n');
-  const processedLines = lines.map(line => {
-    const lastCRIndex = line.lastIndexOf('\r');
-    return lastCRIndex !== -1 ? line.substring(lastCRIndex + 1) : line;
-  });
-
-  element.value = processedLines.join('\n');
-  element.scrollTop = element.scrollHeight;
-}
-
 socket.on("set_code", (code) => {
   codeArea.value = code;
 });
@@ -40,11 +30,17 @@ socket.on("set_stdin", (stdin) => {
 });
 
 socket.on("stdout", (data) => {
-  appendStream(stdout, data);
+  stdout.value = data;
+  stdout.scrollTop = stdout.scrollHeight;
 });
 
 socket.on("stderr", (data) => {
-  appendStream(stderr, data);
+  stderr.value = data;
+  stderr.scrollTop = stderr.scrollHeight;
+});
+
+socket.on("set_stderr_status", (data) => {
+  stderrStatus.textContent = data;
 });
 
 socket.on("process_count", (count) => {

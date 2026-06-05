@@ -110,6 +110,13 @@ main {
   font-family: sans-serif;
 }
 
+#stderr-status {
+  font-family: var(--output-monospace-font);
+  /* font-style: italic; */
+  color: #ff8c8c;
+  margin-left: 10px;
+}
+
 #in-code,
 #in-stdin,
 #out-stdout,
