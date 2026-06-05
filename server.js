@@ -25,25 +25,26 @@ async function detectPythonExecutable() {
     // pypy3 확인
     const pypy3Process = spawn("pypy3", ["--version"]);
     
-    let pypy3Available = false;
     pypy3Process.on("close", (code) => {
       if (code === 0) {
         pythonExecutable = "pypy3";
         console.log("PyPy3 감지됨. PyPy3를 사용합니다.");
         resolve();
-      } else {
-        // python3 확인
-        const python3Process = spawn("python3", ["--version"]);
-        python3Process.on("close", (code) => {
-          if (code === 0) {
-            pythonExecutable = "python3";
-            console.log("Python3 감지됨. Python3를 사용합니다.");
-          } else {
-            console.warn("Python 실행 파일을 찾을 수 없습니다.");
-          }
-          resolve();
-        });
       }
+    });
+
+    pypy3Process.on("error", () => {
+      // pypy3 명령어가 없는 경우 python3 확인
+      const python3Process = spawn("python3", ["--version"]);
+      python3Process.on("close", (code) => {
+        if (code === 0) {
+          pythonExecutable = "python3";
+          console.log("Python3 감지됨. Python3를 사용합니다.");
+        } else {
+          console.warn("Python 실행 파일을 찾을 수 없습니다.");
+        }
+        resolve();
+      });
     });
   });
 }
