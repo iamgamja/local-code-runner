@@ -59,6 +59,7 @@ io.on("connection", (socket) => {
       }
     );
     running_process = pythonProcess;
+    updateProcessCount();
 
     let stdoutBuffer = "";
     pythonProcess.stdout.on("data", (data) => {
