@@ -115,9 +115,12 @@ main {
 #out-stdout,
 #out-stderr {
   height: 500px;
-  overflow: auto;
   font-size: 16px;
   padding: 10px;
+
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  overflow: auto;
   border: 1px solid var(--border-color);
   border-radius: 4px;
 }
