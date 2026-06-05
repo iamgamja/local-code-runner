@@ -5,90 +5,26 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+const BACKUP_DIR = path.join(__dirname, "backups");
+if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR);
+const SCRIPT_PATH = path.join(__dirname, "scripts", "run_script.py");
+if (!fs.existsSync(path.dirname(SCRIPT_PATH))) fs.mkdirSync(path.dirname(SCRIPT_PATH));
+const REQUIREMENTS_PATH = path.join(__dirname, "requirements.txt");
+
+const { detectPythonExecutable } = require("./lib/pythonDetect");
+const { installPythonDependencies } = require("./lib/installDependencies");
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const BACKUP_DIR = path.join(__dirname, "backups");
-const SCRIPT_PATH = path.join(__dirname, "scripts", "run_script.py");
-const REQUIREMENTS_PATH = path.join(__dirname, "requirements.txt");
-
-// 필요한 디렉토리 생성
-if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR);
-if (!fs.existsSync(path.dirname(SCRIPT_PATH)))
-  fs.mkdirSync(path.dirname(SCRIPT_PATH));
-
-let pythonExecutable = "python3";
-
-async function detectPythonExecutable() {
-  return new Promise((resolve) => {
-    // pypy3 확인
-    const pypy3Process = spawn("pypy3", ["--version"]);
-    
-    pypy3Process.on("close", (code) => {
-      if (code === 0) {
-        pythonExecutable = "pypy3";
-        console.log("PyPy3 감지됨. PyPy3를 사용합니다.");
-        resolve();
-      }
-    });
-
-    pypy3Process.on("error", () => {
-      // pypy3 명령어가 없는 경우 python3 확인
-      const python3Process = spawn("python3", ["--version"]);
-      python3Process.on("close", (code) => {
-        if (code === 0) {
-          pythonExecutable = "python3";
-          console.log("Python3 감지됨. Python3를 사용합니다.");
-        } else {
-          console.warn("Python 실행 파일을 찾을 수 없습니다.");
-        }
-        resolve();
-      });
-    });
-  });
-}
-
-async function installPythonDependencies() {
-  if (!fs.existsSync(REQUIREMENTS_PATH)) {
-    console.log("requirements.txt가 없습니다. Python 모듈 설치를 건너뜁니다.");
-    return;
-  }
-
-  console.log("Python 종속성을 확인 중입니다...");
-
-  await new Promise((resolve) => {
-    const pipProcess = spawn(pythonExecutable, [
-      "-m",
-      "pip",
-      "install",
-      "-r",
-      REQUIREMENTS_PATH,
-    ]);
-
-    pipProcess.stdout.on("data", (data) => {
-      process.stdout.write(data.toString());
-    });
-
-    pipProcess.stderr.on("data", (data) => {
-      process.stderr.write(data.toString());
-    });
-
-    pipProcess.on("close", (code) => {
-      if (code === 0) {
-        console.log("Python 종속성이 설치되었거나 최신 상태입니다.");
-      } else {
-        console.warn(`Python 종속성 설치에 실패했습니다. 종료 코드: ${code}`);
-      }
-      resolve();
-    });
-  });
-}
+// 기본값은 python3 (실제로는 detectPythonExecutable에서 갱신)
+let pythoncmd = "python3";
 
 app.use(express.static("public"));
 app.use(express.json());
 
-const MAX_BUFFER_LENGTH = 3_000;
+const MAX_BUFFER_LENGTH = 10_000;
 
 io.on("connection", (socket) => {
   console.log("Client connected");
@@ -111,7 +47,7 @@ io.on("connection", (socket) => {
     fs.writeFileSync(SCRIPT_PATH, code);
 
     // 3. 파이썬 실행 (unbuffered 모드 '-u' 필수: 실시간 출력 보장)
-    const pythonProcess = spawn(pythonExecutable, ["-u", SCRIPT_PATH]);
+    const pythonProcess = spawn(pythoncmd, ["-u", SCRIPT_PATH]);
     running_process = pythonProcess;
     updateProcessCount();
 
@@ -181,8 +117,9 @@ io.on("connection", (socket) => {
 
 const PORT = 3000;
 (async () => {
-  await detectPythonExecutable();
-  await installPythonDependencies();
+  // 사용 가능한 Python 실행 파일 탐지 및 의존성 설치
+  pythoncmd = await detectPythonExecutable();
+  await installPythonDependencies(pythoncmd, REQUIREMENTS_PATH);
 
   server.listen(PORT, () => {
     console.log(`Server is running at http://localhost:${PORT}`);
