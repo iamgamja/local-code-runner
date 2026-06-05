@@ -1,4 +1,4 @@
 node_modules/
 backups/
-scripts/
+running_container/
 *.pyc

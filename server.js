@@ -7,8 +7,8 @@ const path = require("path");
 
 const BACKUP_DIR = path.join(__dirname, "backups");
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR);
-const SCRIPT_PATH = path.join(__dirname, "scripts", "run_script.py");
-if (!fs.existsSync(path.dirname(SCRIPT_PATH))) fs.mkdirSync(path.dirname(SCRIPT_PATH));
+const RUNNING_CONTAINER_DIR = path.join(__dirname, "running_container");
+if (!fs.existsSync(RUNNING_CONTAINER_DIR)) fs.mkdirSync(RUNNING_CONTAINER_DIR);
 const REQUIREMENTS_PATH = path.join(__dirname, "requirements.txt");
 
 const { detectPythonExecutable } = require("./lib/pythonDetect");
@@ -44,17 +44,21 @@ io.on("connection", (socket) => {
     fs.writeFileSync(path.join(BACKUP_DIR, `backup_${timestamp}.py`), code);
 
     // 2. 현재 실행할 파일 저장
-    fs.writeFileSync(SCRIPT_PATH, code);
+    fs.writeFileSync(path.join(RUNNING_CONTAINER_DIR, "run_script.py"), code);
 
-    // 3. 파이썬 실행 (unbuffered 모드 '-u' 필수: 실시간 출력 보장)
-    const pythonProcess = spawn(pythoncmd, ["-u", SCRIPT_PATH]);
+    // 3. stdin을 파일로 기록하고, 파일 경로를 스크립트에 전달
+    const stdinPath = path.join(RUNNING_CONTAINER_DIR, "stdin.txt");
+    fs.writeFileSync(stdinPath, stdin);
+    const stdinFd = fs.openSync(stdinPath, 'r');
+
+    const pythonProcess = spawn(
+      pythoncmd,
+      ["-u", path.join(RUNNING_CONTAINER_DIR, "run_script.py")],
+      {
+        stdio: [stdinFd, 'pipe', 'pipe'],
+      }
+    );
     running_process = pythonProcess;
-    updateProcessCount();
-
-    if (stdin) {
-      pythonProcess.stdin.write(stdin);
-    }
-    pythonProcess.stdin.end();
 
     let stdoutBuffer = "";
     pythonProcess.stdout.on("data", (data) => {
