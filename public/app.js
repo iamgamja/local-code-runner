@@ -20,11 +20,7 @@ function kill() {
   socket.emit("kill");
 }
 
-const MAX_OUTPUT_LENGTH = 10_000;
-
-function appendStream(element, data) {
-  let content = (element.value + data).slice(-MAX_OUTPUT_LENGTH);
-
+function appendStream(element, content) {
   const lines = content.split('\n');
   const processedLines = lines.map(line => {
     const lastCRIndex = line.lastIndexOf('\r');
@@ -34,6 +30,14 @@ function appendStream(element, data) {
   element.value = processedLines.join('\n');
   element.scrollTop = element.scrollHeight;
 }
+
+socket.on("set_code", (code) => {
+  codeArea.value = code;
+});
+
+socket.on("set_stdin", (stdin) => {
+  stdinArea.value = stdin;
+});
 
 socket.on("stdout", (data) => {
   appendStream(stdout, data);

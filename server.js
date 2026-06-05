@@ -9,6 +9,8 @@ const BACKUP_DIR = path.join(__dirname, "backups");
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR);
 const RUNNING_CONTAINER_DIR = path.join(__dirname, "running_container");
 if (!fs.existsSync(RUNNING_CONTAINER_DIR)) fs.mkdirSync(RUNNING_CONTAINER_DIR);
+const CODE_PATH = path.join(RUNNING_CONTAINER_DIR, "code.py");
+const STDIN_PATH = path.join(RUNNING_CONTAINER_DIR, "stdin.txt");
 const REQUIREMENTS_PATH = path.join(__dirname, "requirements.txt");
 
 const { detectPythonExecutable } = require("./lib/pythonDetect");
@@ -26,100 +28,105 @@ app.use(express.json());
 
 const MAX_BUFFER_LENGTH = 10_000;
 
+let running_process = null;
+let stdoutHistory = "";
+let stderrHistory = "";
+
+function updateProcessCount() {
+  io.emit("process_count", running_process ? 1 : 0);
+}
+
+function run_code({ code, stdin }) {
+  if (running_process) return;
+
+  // 1. 로컬 백업
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  fs.writeFileSync(path.join(BACKUP_DIR, `backup_${timestamp}.py`), code);
+
+  // 2. 현재 실행할 파일 저장
+  fs.writeFileSync(CODE_PATH, code);
+
+  // 3. stdin을 파일로 기록하고, 파일 경로를 스크립트에 전달
+  fs.writeFileSync(STDIN_PATH, stdin);
+  const stdinFd = fs.openSync(STDIN_PATH, "r");
+
+  const pythonProcess = spawn(
+    pythoncmd,
+    ["-u", CODE_PATH],
+    {
+      stdio: [stdinFd, "pipe", "pipe"],
+      timeout: 1 * 60 * 60 * 1000, // 1시간 타임아웃
+    },
+  );
+  fs.closeSync(stdinFd);
+
+  running_process = pythonProcess;
+  updateProcessCount();
+  stdoutHistory = "";
+  stderrHistory = "";
+
+  pythonProcess.stdout.on("data", (data) => {
+    stdoutHistory += data.toString();
+    stdoutHistory = stdoutHistory.slice(-MAX_BUFFER_LENGTH);
+  });
+  pythonProcess.stderr.on("data", (data) => {
+    stderrHistory += data.toString();
+    stderrHistory = stderrHistory.slice(-MAX_BUFFER_LENGTH);
+  });
+
+  const sendInterval = setInterval(() => {
+    if (stdoutHistory) {
+      io.emit("stdout", stdoutHistory);
+    }
+    if (stderrHistory) {
+      io.emit("stderr", stderrHistory);
+    }
+  }, 100);
+
+  pythonProcess.on("close", (code) => {
+    clearInterval(sendInterval);
+    if (stdoutHistory) {
+      io.emit("stdout", stdoutHistory);
+      stdoutHistory = "";
+    }
+    if (stderrHistory) {
+      io.emit("stderr", stderrHistory);
+      stderrHistory = "";
+    }
+    if (code !== null) {
+      io.emit("stderr", `\n[Process exited with code ${code}]\n\n`);
+    }
+
+    running_process = null;
+    updateProcessCount();
+  });
+}
+
 io.on("connection", (socket) => {
   console.log("Client connected");
 
-  // 각 소켓마다 실행 중인 프로세스 추적
-  let running_process = null;
-
-  function updateProcessCount() {
-    socket.emit("process_count", running_process ? 1 : 0);
+  socket.emit("process_count", running_process ? 1 : 0);
+  if (fs.existsSync(CODE_PATH)) {
+    socket.emit("set_code", fs.readFileSync(CODE_PATH, "utf-8"));
+  }
+  if (fs.existsSync(STDIN_PATH)) {
+    socket.emit("set_stdin", fs.readFileSync(STDIN_PATH, "utf-8"));
   }
 
   socket.on("run_code", ({ code, stdin }) => {
-    if (running_process) return; // 이미 실행 중인 프로세스가 있으면 무시
+    if (running_process) return;
 
-    // 1. 로컬 백업
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    fs.writeFileSync(path.join(BACKUP_DIR, `backup_${timestamp}.py`), code);
-
-    // 2. 현재 실행할 파일 저장
-    fs.writeFileSync(path.join(RUNNING_CONTAINER_DIR, "run_script.py"), code);
-
-    // 3. stdin을 파일로 기록하고, 파일 경로를 스크립트에 전달
-    const stdinPath = path.join(RUNNING_CONTAINER_DIR, "stdin.txt");
-    fs.writeFileSync(stdinPath, stdin);
-    const stdinFd = fs.openSync(stdinPath, 'r');
-
-    const pythonProcess = spawn(
-      pythoncmd,
-      [
-        "-u", 
-        path.join(RUNNING_CONTAINER_DIR, "run_script.py")
-      ],
-      {
-        stdio: [stdinFd, 'pipe', 'pipe'],
-        timeout: 1 * 60 * 60 * 1000, // 1시간 타임아웃
-      }
-    );
-    running_process = pythonProcess;
-    updateProcessCount();
-
-    let stdoutBuffer = "";
-    pythonProcess.stdout.on("data", (data) => {
-      stdoutBuffer += data.toString();
-      stdoutBuffer = stdoutBuffer.slice(-MAX_BUFFER_LENGTH);
-    });
-    const flushStdoutInterval = setInterval(() => {
-      if (stdoutBuffer) {
-        socket.emit("stdout", stdoutBuffer);
-        stdoutBuffer = "";
-      }
-    }, 100);
-
-    let stderrBuffer = "";
-    pythonProcess.stderr.on("data", (data) => {
-      stderrBuffer += data.toString();
-      stderrBuffer = stderrBuffer.slice(-MAX_BUFFER_LENGTH);
-    });
-    const flushStderrInterval = setInterval(() => {
-      if (stderrBuffer) {
-        socket.emit("stderr", stderrBuffer);
-        stderrBuffer = "";
-      }
-    }, 100);
-
-    pythonProcess.on("close", (code) => {
-      clearInterval(flushStdoutInterval);
-      clearInterval(flushStderrInterval);
-      if (stdoutBuffer) {
-        socket.emit("stdout", stdoutBuffer);
-        stdoutBuffer = "";
-      }
-      if (stderrBuffer) {
-        socket.emit("stderr", stderrBuffer);
-        stderrBuffer = "";
-      }
-      if (code !== null) {
-        socket.emit("stderr", `\n[Process exited with code ${code}]\n\n`);
-      }
-
-      running_process = null;
-      updateProcessCount();
-    });
+    run_code({ code, stdin });
   });
 
   socket.on("kill", () => {
     if (running_process && !running_process.killed) {
       running_process.kill();
-      socket.emit("stderr", "\n[Process terminated]\n\n");
+      io.emit("stderr", "\n[Process terminated]\n\n");
     }
   });
 
   socket.on("disconnect", () => {
-    if (running_process && !running_process.killed) {
-      running_process.kill();
-    }
     console.log("Client disconnected");
   });
 });
