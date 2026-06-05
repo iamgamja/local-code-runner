@@ -53,9 +53,13 @@ io.on("connection", (socket) => {
 
     const pythonProcess = spawn(
       pythoncmd,
-      ["-u", path.join(RUNNING_CONTAINER_DIR, "run_script.py")],
+      [
+        "-u", 
+        path.join(RUNNING_CONTAINER_DIR, "run_script.py")
+      ],
       {
         stdio: [stdinFd, 'pipe', 'pipe'],
+        timeout: 1 * 60 * 60 * 1000, // 1시간 타임아웃
       }
     );
     running_process = pythonProcess;
