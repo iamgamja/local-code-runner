@@ -1,30 +1,29 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-const { spawn } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+import { existsSync, mkdirSync, writeFileSync, openSync, closeSync, readFileSync } from "fs";
+import { spawn } from "child_process";
+import path from "path";
+import http from "http";
+import express from "express";
+import * as socket from "socket.io";
 
-const BACKUP_DIR = path.join(__dirname, "backups");
-if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR);
-const RUNNING_CONTAINER_DIR = path.join(__dirname, "running_container");
-if (!fs.existsSync(RUNNING_CONTAINER_DIR)) fs.mkdirSync(RUNNING_CONTAINER_DIR);
-const CODE_PATH = path.join(RUNNING_CONTAINER_DIR, "code.py");
-const STDIN_PATH = path.join(RUNNING_CONTAINER_DIR, "stdin.txt");
-const REQUIREMENTS_PATH = path.join(__dirname, "requirements.txt");
+import { detectPythonExecutable } from "./lib/pythonDetect.js";
+import { installPythonDependencies } from "./lib/installDependencies.js";
 
-const { detectPythonExecutable } = require("./lib/pythonDetect");
-const { installPythonDependencies } = require("./lib/installDependencies");
+const BACKUP_DIR = path.resolve("backups");
+if (!existsSync(BACKUP_DIR)) mkdirSync(BACKUP_DIR);
+const RUNNING_CONTAINER_DIR = path.resolve("running_container");
+if (!existsSync(RUNNING_CONTAINER_DIR)) mkdirSync(RUNNING_CONTAINER_DIR);
+const CODE_PATH = path.resolve(RUNNING_CONTAINER_DIR, "code.py");
+const STDIN_PATH = path.resolve(RUNNING_CONTAINER_DIR, "stdin.txt");
+const REQUIREMENTS_PATH = path.resolve("requirements.txt");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-
-// 기본값은 python3 (실제로는 detectPythonExecutable에서 갱신)
-let pythoncmd = "python3";
+const io = new socket.Server(server);
 
 app.use(express.static("public"));
 app.use(express.json());
+
+let pythoncmd = null;
 
 const MAX_BUFFER_LENGTH = 10_000;
 
@@ -41,14 +40,14 @@ function run_code({ code, stdin }) {
 
   // 1. 로컬 백업
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  fs.writeFileSync(path.join(BACKUP_DIR, `backup_${timestamp}.py`), code);
+  writeFileSync(path.resolve(BACKUP_DIR, `backup_${timestamp}.py`), code);
 
   // 2. 현재 실행할 파일 저장
-  fs.writeFileSync(CODE_PATH, code);
+  writeFileSync(CODE_PATH, code);
 
   // 3. stdin을 파일로 기록하고, 파일 경로를 스크립트에 전달
-  fs.writeFileSync(STDIN_PATH, stdin);
-  const stdinFd = fs.openSync(STDIN_PATH, "r");
+  writeFileSync(STDIN_PATH, stdin);
+  const stdinFd = openSync(STDIN_PATH, "r");
 
   const pythonProcess = spawn(
     pythoncmd,
@@ -58,7 +57,7 @@ function run_code({ code, stdin }) {
       timeout: 1 * 60 * 60 * 1000, // 1시간 타임아웃
     },
   );
-  fs.closeSync(stdinFd);
+  closeSync(stdinFd);
 
   running_process = pythonProcess;
   updateProcessCount();
@@ -115,11 +114,11 @@ io.on("connection", (socket) => {
   console.log("Client connected");
 
   socket.emit("process_count", running_process ? 1 : 0);
-  if (fs.existsSync(CODE_PATH)) {
-    socket.emit("set_code", fs.readFileSync(CODE_PATH, "utf-8"));
+  if (existsSync(CODE_PATH)) {
+    socket.emit("set_code", readFileSync(CODE_PATH, "utf-8"));
   }
-  if (fs.existsSync(STDIN_PATH)) {
-    socket.emit("set_stdin", fs.readFileSync(STDIN_PATH, "utf-8"));
+  if (existsSync(STDIN_PATH)) {
+    socket.emit("set_stdin", readFileSync(STDIN_PATH, "utf-8"));
   }
   socket.emit("set_stderr_status", running_process ? "running" : "");
 
