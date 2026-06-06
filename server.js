@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, writeFileSync, openSync, closeSync, readFileSync } from "fs";
+import {
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  openSync,
+  closeSync,
+  readFileSync,
+} from "fs";
 import { spawn } from "child_process";
 import path from "path";
 import http from "http";
@@ -32,7 +39,7 @@ let stdoutHistory = "";
 let stderrHistory = "";
 
 function updateProcessCount() {
-  io.emit("process_count", running_process ? 1 : 0);
+  io.emit("is_running", !!running_process);
 }
 
 function run_code({ code, stdin }) {
@@ -49,14 +56,10 @@ function run_code({ code, stdin }) {
   writeFileSync(STDIN_PATH, stdin);
   const stdinFd = openSync(STDIN_PATH, "r");
 
-  const pythonProcess = spawn(
-    pythoncmd,
-    ["-u", CODE_PATH],
-    {
-      stdio: [stdinFd, "pipe", "pipe"],
-      timeout: 1 * 60 * 60 * 1000, // 1시간 타임아웃
-    },
-  );
+  const pythonProcess = spawn(pythoncmd, ["-u", CODE_PATH], {
+    stdio: [stdinFd, "pipe", "pipe"],
+    timeout: 1 * 60 * 60 * 1000, // 1시간 타임아웃
+  });
   closeSync(stdinFd);
 
   running_process = pythonProcess;
@@ -68,18 +71,24 @@ function run_code({ code, stdin }) {
   pythonProcess.stdout.on("data", (data) => {
     stdoutHistory += data.toString();
     stdoutHistory = stdoutHistory.slice(-MAX_BUFFER_LENGTH);
-    stdoutHistory = stdoutHistory.split('\n').map(line => {
-      const lastCRIndex = line.lastIndexOf('\r');
-      return lastCRIndex !== -1 ? line.substring(lastCRIndex + 1) : line;
-    }).join('\n');
+    stdoutHistory = stdoutHistory
+      .split("\n")
+      .map((line) => {
+        const lastCRIndex = line.lastIndexOf("\r");
+        return lastCRIndex !== -1 ? line.substring(lastCRIndex + 1) : line;
+      })
+      .join("\n");
   });
   pythonProcess.stderr.on("data", (data) => {
     stderrHistory += data.toString();
     stderrHistory = stderrHistory.slice(-MAX_BUFFER_LENGTH);
-    stderrHistory = stderrHistory.split('\n').map(line => {
-      const lastCRIndex = line.lastIndexOf('\r');
-      return lastCRIndex !== -1 ? line.substring(lastCRIndex + 1) : line;
-    }).join('\n');
+    stderrHistory = stderrHistory
+      .split("\n")
+      .map((line) => {
+        const lastCRIndex = line.lastIndexOf("\r");
+        return lastCRIndex !== -1 ? line.substring(lastCRIndex + 1) : line;
+      })
+      .join("\n");
   });
 
   const sendInterval = setInterval(() => {
@@ -113,7 +122,7 @@ function run_code({ code, stdin }) {
 io.on("connection", (socket) => {
   console.log("Client connected");
 
-  socket.emit("process_count", running_process ? 1 : 0);
+  socket.emit("is_running", !!running_process);
   if (existsSync(CODE_PATH)) {
     socket.emit("set_code", readFileSync(CODE_PATH, "utf-8"));
   }
