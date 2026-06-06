@@ -8,39 +8,32 @@
   <body>
     <header>
       <h2 id="title-idle">
-        Python Code <button id="run-btn" onclick="execute()">Run</button>ner
+        Python Code <button id="run-btn" class="btn" onclick="execute()">Run</button>ner
       </h2>
       <h2 id="title-running" class="hide">
-        Python Code
-        <button id="kill-btn" onclick="kill()" disabled>Kill</button>er
+        Python Code <button id="kill-btn" class="btn" onclick="kill()" disabled>Kill</button>er
       </h2>
     </header>
 
     <main>
-      <section class="editor-pane">
-        <label for="in-code">code</label>
-        <textarea
-          id="in-code"
-          placeholder="# code"
-        ></textarea>
+      <section class="pane">
+        <label for="code-editor">code</label>
+        <textarea id="code-editor" class="editor in-editor" placeholder="# code"></textarea>
       </section>
 
-      <section class="editor-pane">
-        <label for="in-stdin">stdin</label>
-        <textarea
-          id="in-stdin"
-          placeholder="stdin"
-        ></textarea>
+      <section class="pane">
+        <label for="stdin-editor">stdin</label>
+        <textarea id="stdin-editor" class="editor in-editor" placeholder="stdin"></textarea>
       </section>
 
-      <section class="output-pane">
-        <label for="out-stdout">stdout</label>
-        <textarea id="out-stdout" readonly></textarea>
+      <section class="pane">
+        <label for="stdout-editor">stdout</label>
+        <textarea id="stdout-editor" class="editor out-editor" readonly></textarea>
       </section>
 
-      <section class="output-pane">
-        <label for="out-stderr">stderr <output id="stderr-status"></output></label>
-        <textarea id="out-stderr" readonly></textarea>
+      <section class="pane">
+        <label for="stderr-editor">stderr <output id="stderr-status"></output></label>
+        <textarea id="stderr-editor" class="editor out-editor" readonly></textarea>
       </section>
     </main>
 

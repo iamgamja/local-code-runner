@@ -35,8 +35,7 @@ header {
   display: none;
 }
 
-#run-btn,
-#kill-btn {
+.btn {
   all: unset;
   transition: color 0.2s;
 }
@@ -48,14 +47,12 @@ header {
   color: #c82333;
 }
 
-#run-btn:hover:not(:disabled),
-#kill-btn:hover:not(:disabled) {
+.btn:hover:not(:disabled) {
   filter: brightness(1.2);
   text-decoration: underline;
 }
 
-#run-btn:disabled,
-#kill-btn:disabled {
+.btn:disabled {
   color: var(--disabled-color);
 }
 
@@ -66,30 +63,24 @@ main {
   align-items: start;
 }
 
-.editor-pane,
-.output-pane {
+.pane {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.editor-pane label,
-.output-pane label {
+.pane label {
   font-weight: bold;
   font-family: sans-serif;
 }
 
 #stderr-status {
   font-family: var(--output-monospace-font);
-  /* font-style: italic; */
   color: #ff8c8c;
   margin-left: 10px;
 }
 
-#in-code,
-#in-stdin,
-#out-stdout,
-#out-stderr {
+.editor {
   height: 500px;
   font-size: 16px;
   padding: 10px;
@@ -101,23 +92,21 @@ main {
   border-radius: 4px;
 }
 
-#in-code,
-#in-stdin {
+.in-editor {
   font-family: var(--input-monospace-font);
   background: white;
 }
 
-#out-stdout,
-#out-stderr {
+.out-editor {
   font-family: var(--output-monospace-font);
 }
 
-#out-stdout {
+#stdout-editor {
   background: #1e1e1e;
   color: #d4d4d4;
 }
 
-#out-stderr {
+#stderr-editor {
   background: #2a1e1e;
   color: #ff8c8c;
 }
