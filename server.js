@@ -142,7 +142,6 @@ io.on("connection", (socket) => {
 
 const PORT = 3000;
 (async () => {
-  // 사용 가능한 Python 실행 파일 탐지 및 의존성 설치
   pythoncmd = await detectPythonExecutable();
   await installPythonDependencies(pythoncmd, REQUIREMENTS_PATH);
 

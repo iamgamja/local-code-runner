@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "ora": "^9.4.0",
     "socket.io": "^4.8.3"
   }
 }
