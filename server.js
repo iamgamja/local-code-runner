@@ -12,8 +12,8 @@ import http from "http";
 import express from "express";
 import * as socket from "socket.io";
 
-import { detectPythonExecutable } from "./lib/pythonDetect.js";
-import { installPythonDependencies } from "./lib/installDependencies.js";
+import { detectPythonExecutable } from "./lib/detectPythonExecutable.js";
+import { installPythonDependencies } from "./lib/installPythonDependencies.js";
 
 const BACKUP_DIR = path.resolve("backups");
 if (!existsSync(BACKUP_DIR)) mkdirSync(BACKUP_DIR);
