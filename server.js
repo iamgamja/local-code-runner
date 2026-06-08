@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, writeFileSync, openSync, closeSync, readFileSync
 import { spawn } from 'child_process'
 import path from 'path'
 import http from 'http'
+import readline from 'readline'
 import express from 'express'
 import * as socket from 'socket.io'
 
@@ -153,3 +154,23 @@ const PORT = 3000
     console.log(`Server is running at http://localhost:${PORT}`)
   })
 })()
+
+readline
+  .createInterface({
+    input: process.stdin,
+  })
+  .on('line', (input) => {
+    if (input.trim() === 'q') {
+      process.exit(0)
+    } else if (input.trim() === 'r') {
+      spawn('npm', ['start'], {
+        detached: true,
+        stdio: 'inherit',
+      })
+
+      process.exit(0)
+    }
+  })
+  .on('close', () => {
+    process.exit(0)
+  })
