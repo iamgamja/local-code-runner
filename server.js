@@ -14,6 +14,7 @@ import * as socket from "socket.io";
 
 import { detectPythonExecutable } from "./lib/detectPythonExecutable.js";
 import { installPythonDependencies } from "./lib/installPythonDependencies.js";
+import { cleanupOldBackups } from "./lib/cleanupOldBackups.js";
 
 const BACKUP_DIR = path.resolve("backups");
 if (!existsSync(BACKUP_DIR)) mkdirSync(BACKUP_DIR);
@@ -151,6 +152,8 @@ io.on("connection", (socket) => {
 
 const PORT = 3000;
 (async () => {
+  cleanupOldBackups(BACKUP_DIR);
+
   pythoncmd = await detectPythonExecutable();
   await installPythonDependencies(pythoncmd, REQUIREMENTS_PATH);
 
