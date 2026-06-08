@@ -162,13 +162,6 @@ readline
   .on('line', (input) => {
     if (input.trim() === 'q') {
       process.exit(0)
-    } else if (input.trim() === 'r') {
-      spawn('npm', ['start'], {
-        detached: true,
-        stdio: 'inherit',
-      })
-
-      process.exit(0)
     }
   })
   .on('close', () => {
