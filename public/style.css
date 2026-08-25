@@ -29,6 +29,10 @@ header {
   font-family: sans-serif;
 }
 
+select {
+  all: unset;
+}
+
 .hide {
   display: none;
 }

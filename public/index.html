@@ -2,13 +2,22 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <title>Python Runner</title>
+    <title>Code Runner</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <header>
-      <h2 id="title-idle">Python Code <button id="run-btn" class="btn" onclick="execute()">Run</button>ner</h2>
-      <h2 id="title-running" class="hide">Python Code <button id="kill-btn" class="btn" onclick="kill()" disabled>Kill</button>er</h2>
+      <h2>
+        <select id="select-lang">
+          <option value="pypy3">PyPy3</option>
+          <option value="cpp20">C++20</option>
+        </select>
+
+        Code
+
+        <span id="title-idle"><button id="run-btn" class="btn" onclick="execute()">Run</button>ner</span>
+        <span id="title-running" class="hide"><button id="kill-btn" class="btn" onclick="kill()" disabled>Kill</button>er</span>
+      </h2>
     </header>
 
     <main>

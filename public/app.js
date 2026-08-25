@@ -5,6 +5,7 @@ const stdout = document.getElementById('stdout-editor')
 const stderr = document.getElementById('stderr-editor')
 const titleIdle = document.getElementById('title-idle')
 const titleRunning = document.getElementById('title-running')
+const selectLang = document.getElementById('select-lang')
 const runBtn = document.getElementById('run-btn')
 const killBtn = document.getElementById('kill-btn')
 const stderrStatus = document.getElementById('stderr-status')
@@ -13,6 +14,7 @@ function execute() {
   stdout.value = ''
   stderr.value = ''
   socket.emit('run_code', {
+    lang: selectLang.value,
     code: codeArea.value,
     stdin: stdinArea.value,
   })
